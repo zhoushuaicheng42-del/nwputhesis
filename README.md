@@ -1,8 +1,15 @@
-# NwpuThesis
+<div align="center">
+
+**西北工业大学本硕博论文 LaTeX 模板**
+
+***NwpuThesis***
 
 [![Test](https://github.com/1195343015/nwputhesis/actions/workflows/test.yml/badge.svg)](https://github.com/1195343015/nwputhesis/actions/workflows/test.yml)
-[![Release](https://img.shields.io/github/v/release/1195343015/nwputhesis)](https://github.com/1195343015/nwputhesis/releases/latest)
+[![Release](https://img.shields.io/github/v/release/1195343015/nwputhesis?color=orange)](https://github.com/1195343015/nwputhesis/releases/latest)
+[![TeX Live](https://img.shields.io/badge/TeX%20Live-2026-yellow)](https://www.tug.org/texlive/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+</div>
 
 > 如果没有强烈使用 LaTeX 写论文的需求，推荐使用 Typst 模板 **[modern-npu-thesis](https://github.com/1195343015/modern-npu-thesis)** ，这是一个 **西北工业大学本硕博论文 Typst 模板**。相比 LaTeX，其语法更简洁，类似于 Markdown 语法，对新手更友好，编译速度远比 LaTeX 快。
 
@@ -13,15 +20,14 @@
 本科论文格式符合 26 届最新要求，参考 [西北工业大学本科毕业设计（论文）撰写规范](https://jiaowu.nwpu.edu.cn/info/1160/24598.htm)。
 
 ## 版本更新说明
-- 模板升级时，用户通常不需要改动已填写好的 `content` 内容，只需要替换其他文件即可，如有特殊情况会在 Releases 页面说明。
-  
+ 
 - 本模板版本号采用 `X.Y.Z` 形式：
 - `X` 表示重大更新，例如跟进学校发布的新模板格式。
 - `Y` 表示影响模板使用方式的更新。
 - `Z` 表示格式修复或其它不影响模板使用方式的更新。
 
 ## 使用说明
-- **Fork 仓库**（推荐）：Fork [最新版本对应的 Tag](https://github.com/1195343015/nwputhesis/releases/latest)，方便后续通过 Git 跟踪更新。
+- **Fork 仓库**（推荐）：方便后续通过 Git 跟踪更新。
 - **下载 Release**：也可直接下载 [最新 Release 版本](https://github.com/1195343015/nwputhesis/releases/latest)。非 Windows 系统用户需要从仓库中自行下载 Windows 字体。
 - 支持各种操作系统，推荐在 TeX Live 最新版本下搭配 VS Code 中的 LaTeX Workshop 插件使用。
 
