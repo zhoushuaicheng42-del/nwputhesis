@@ -440,6 +440,7 @@
     \nwpu_if_colorcover:TF {
         \clearpage
         \thispagestyle{empty}
+        \tracinglostchars=0
         \begin{tikzpicture}[remember~picture,overlay]
             \node[at=(current~page.center),inner~sep=\nwpuCoverBackgroundInnerSep] {
                 \nwpu_if_phd:TF {

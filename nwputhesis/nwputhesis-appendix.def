@@ -92,7 +92,7 @@
         { \nwpu@ifappendixletter{\nwpu@appendixprefix-}{} }
 }
 \AtEndDocument{%
-    \protected@write\@auxout{}{%
+    \immediate\write\@auxout{%
         \string\nwpuSetAppendixTotal{\int_use:N \l__nwpu_thesis_appendix_count_int}%
     }%
 }
