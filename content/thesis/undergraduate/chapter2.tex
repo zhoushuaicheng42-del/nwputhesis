@@ -1,61 +1,188 @@
-%% 第二章
+﻿%% 第二章 物理模型与问题描述
 
-\chapter{图表示例}
-\chaptermark{图表示例}
+\chapter{物理模型与问题描述}
+\chaptermark{物理模型与问题描述}
 
-\section{表格}
-如\autoref{tab:undergraduate-example} 所示，该表展示了两个变量的加法与乘法结果，可作为表格排版与引用的示例。
-\begin{table}[!h]
-    \caption{表格标题}
-    \label{tab:undergraduate-example}
-    \begin{tabular}{|c|c|c|c|}
-        \hline
-        $A$ & $B$ & $A+B$ & $A\times B$ \\ \hline
-        1   & 6   & 7     & 6           \\ \hline
-        2   & 7   & 9     & 14          \\ \hline
-        3   & 8   & 11    & 24          \\ \hline
-    \end{tabular}
-\end{table}
+为研究自推进体在非定常流场中的能耗优化迁移问题，本章首先介绍所采用的
+二维非定常双涡流流场模型及其数学描述，
+然后建立自推进体的运动学模型并定义推进功率与能量消耗的量化方法，
+最后给出点对点迁移任务的形式化描述。
 
-\section{插图}
-测试下文章内的图片引用。如\autoref{fig:undergraduate-example} 和\autoref{fig:undergraduate-example2} 所示，
-这是两幅插图。在这其中\autoref{subfig:undergraduate-example2-subfig1} 是第一幅子图，
-\autoref{subfig:undergraduate-example2-subfig2} 是第二幅子图。
+\section{二维非定常双涡流模型}
 
-\begin{figure}[htb]
-    \includegraphics[scale=0.5]{example.png}
-    \caption{这里是个普通的标题}
-    \label{fig:undergraduate-example}
-\end{figure}
+\subsection{流场控制方程}
 
-\begin{figure}[htb]
-    \begin{subfigure}[t]{0.49\textwidth}\centering
-        \includegraphics[scale=0.5]{example.png}
-        \caption{这是第一个子图标题}
-        \label{subfig:undergraduate-example2-subfig1}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[t]{0.49\textwidth}\centering
-        \includegraphics[scale=0.5]{example.png}
-        \caption{这是第二个子图标题}
-        \label{subfig:undergraduate-example2-subfig2}
-    \end{subfigure}
-    \caption{这里是另一个普通的标题}
-    \label{fig:undergraduate-example2}
-\end{figure}
-
-\section{公式示例}
-这里给出正文中的公式引用示例。行内公式可写为 $E=mc^2$，独立编号公式如\autoref{eq:undergraduate-quadratic-formula} 所示，多行推导公式如\autoref{eq:undergraduate-gaussian-sum} 所示。
+本文采用二维非定常双涡流模型作为理论验证环境。
+该模型由两个随时间周期性振荡的涡旋组成，
+能够产生丰富的拉格朗日相干结构，是研究流体输运和混合问题的经典基准流场。
+其流函数定义为
 
 \begin{equation}
-    x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
-    \label{eq:undergraduate-quadratic-formula}
+    \psi(x, y, t) = A \sin(\pi f(x, t)) \sin(\pi y),
+    \label{eq:stream_function}
+\end{equation}
+
+其中
+
+\begin{equation}
+    f(x, t) = a(t) x^2 + b(t) x,
+    \label{eq:f_function}
 \end{equation}
 
 \begin{equation}
-    \begin{aligned}
-        \sum_{i=1}^{n} i &= 1 + 2 + \cdots + n \\
-                         &= \frac{n(n+1)}{2}
-    \end{aligned}
-    \label{eq:undergraduate-gaussian-sum}
+    a(t) = \epsilon \sin(\omega t), \quad b(t) = 1 - 2\epsilon \sin(\omega t).
+    \label{eq:ab_functions}
 \end{equation}
+
+式(\ref{eq:stream_function})中，$\psi$为流函数，$x \in [0, 2]$与$y \in [0, 1]$
+分别为流向和法向坐标，$t$为时间，$A$为涡旋振幅（表征流场强度），
+$\epsilon$为振荡幅度，$\omega$为振荡角频率。
+
+速度场由流函数的空间导数给出
+
+\begin{equation}
+    u(x, y, t) = -\frac{\partial \psi}{\partial y} = -A\pi \sin(\pi f(x, t)) \cos(\pi y),
+    \label{eq:u_velocity}
+\end{equation}
+
+\begin{equation}
+    v(x, y, t) = \frac{\partial \psi}{\partial x}
+                = A\pi \cos(\pi f(x, t)) \sin(\pi y) \frac{\partial f}{\partial x},
+    \label{eq:v_velocity}
+\end{equation}
+
+其中$\partial f / \partial x = 2a(t)x + b(t)$。
+
+\subsection{流场结构与特征}
+
+当$\epsilon = 0$时，流场退化为定常双涡流，流场被一条连接左右边界的流线
+（异宿轨道）划分为上下两个对称的涡旋区域，涡旋中心的横坐标分别位于$x=0.5$
+和$x=1.5$处。当$\epsilon > 0$时，流场呈现周期性振荡特征，
+异宿轨道随时间发生左右振荡，涡旋边界被打破，流体微团可在上下两个涡之间
+进行跨区域输运。
+
+图\ref{fig:dg_snapshot}展示了二维双涡流的典型流场快照。
+图中矢量箭头表示局部速度方向，背景颜色表示流函数的大小。
+可以清楚地观察到上下两个涡旋结构以及其间的流体交换通道。
+
+\section{自推进体运动学模型}
+
+\subsection{运动学方程}
+
+本文将自推进体建模为随流漂移并具有自主推进能力的点状颗粒。
+在二维流场中，自推进体的运动由流场对流速度与自主推进速度两部分叠加而成
+
+\begin{equation}
+    \dot{\mathbf{x}}(t) = \mathbf{u}(\mathbf{x}(t), t) + \mathbf{v}_{\text{prop}}(t),
+    \label{eq:kinematics}
+\end{equation}
+
+其中$\mathbf{x}(t) = (x(t), y(t))$为颗粒在$t$时刻的位置坐标，
+$\mathbf{u}(\mathbf{x}(t), t) = (u(x, y, t), v(x, y, t))$为局部流场速度，
+$\mathbf{v}_{\text{prop}}(t)$为自主推进速度矢量。
+
+自主推进速度由智能体（强化学习策略）在每个时间步决策产生，
+其大小和方向可连续调节。为限制推进能力，引入最大推进速度约束
+
+\begin{equation}
+    |\mathbf{v}_{\text{prop}}(t)| \leq V_{\max},
+    \label{eq:speed_constraint}
+\end{equation}
+
+其中$V_{\max}$为最大自主推进速率。
+
+\subsection{推进功率与能耗定义}
+
+自推进体在运动过程中的瞬时推进功率定义为其自主推进力与速度的标量积
+
+\begin{equation}
+    P(t) = |\mathbf{v}_{\text{prop}}(t)|^2,
+    \label{eq:power}
+\end{equation}
+
+该定义基于低雷诺数流体中阻力和推进速度之间呈线性关系的假设，
+因此瞬时功率正比于推进速度的平方。
+
+从起始时刻$t=0$到到达时刻$t=T$的总能量消耗为瞬时功率的时间积分
+
+\begin{equation}
+    E = \int_{0}^{T} P(t) \, \mathrm{d}t = \int_{0}^{T} |\mathbf{v}_{\text{prop}}(t)|^2 \, \mathrm{d}t.
+    \label{eq:total_energy}
+\end{equation}
+
+需要注意的是，流场对流对颗粒不做功——流场仅提供漂移运动，
+颗粒不因流场速度而消耗自身能量。只有自主推进部分产生能量消耗。
+
+\section{点对点迁移任务形式化}
+
+\subsection{任务描述}
+
+本文研究的核心问题可形式化描述为：给定起始点$\mathbf{x}_0$和目标点$\mathbf{x}_g$，
+自推进体需在未知的（从智能体视角）非定常流场中，
+从起始点运动至目标点，且在过程中最小化自身的能耗$E$。
+
+任务成功条件为：自推进体在某一时刻$T$首次进入以目标点$\mathbf{x}_g$为中心、
+半径$r_{\text{goal}}$的圆形邻域内，即
+
+\begin{equation}
+    |\mathbf{x}(T) - \mathbf{x}_g| \leq r_{\text{goal}}.
+    \label{eq:goal_condition}
+\end{equation}
+
+其中$r_{\text{goal}}$为预设的到达半径阈值。
+
+\subsection{直线基准策略}
+
+为评估智能策略的节能效果，本文引入直线基准策略作为对照。
+直线基准策略的具体设计如下：给定智能策略在某一回合中的实际迁移耗时$T$，
+基准策略强制自推进体沿起始点到目标点的绝对直线匀速运动，
+并在相同耗时$T$内完成迁移。
+
+基准策略的匀速推进速度为
+
+\begin{equation}
+    \mathbf{v}_{\text{naive}}(t) = \frac{\mathbf{x}_g - \mathbf{x}_0}{T} - \mathbf{u}(\mathbf{x}_{\text{naive}}(t), t),
+    \label{eq:naive_velocity}
+\end{equation}
+
+该策略确保基准体与智能体在同一时间内完成迁移，
+因此二者的能耗对比具有公平性——差异仅源于路径选择的不同。
+由于基准体无法利用流场中的有利结构，
+其能耗通常显著高于智能体。
+
+\subsection{评价指标}
+
+为全面评估迁移策略的性能，本文定义以下评价指标：
+
+(1) 总能耗$E$：根据式(\ref{eq:total_energy})计算的推进能耗。
+
+(2) 能耗比$\eta$：智能体能耗与直线基准能耗的比值
+
+\begin{equation}
+    \eta = \frac{E_{\text{smart}}}{E_{\text{naive}}}.
+    \label{eq:energy_ratio}
+\end{equation}
+
+$\eta < 1$表明智能策略具有节能优势，$\eta$越小说明节能效果越显著。
+
+(3) 余弦相似度$\cos\theta$：定义智能体推进方向与局部流向之间的余弦相似度为
+
+\begin{equation}
+    \cos\theta(t) = \frac{\mathbf{v}_{\text{prop}}(t) \cdot \mathbf{u}(\mathbf{x}(t), t)}
+                          {|\mathbf{v}_{\text{prop}}(t)| \, |\mathbf{u}(\mathbf{x}(t), t)|},
+    \label{eq:cosine_similarity}
+\end{equation}
+
+该指标从物理机理层面量化智能体"借流而行"的程度：
+$\cos\theta \to 1$表示推进方向与流向高度一致（顺流而行），
+$\cos\theta \to 0$表示推进方向与流向正交，
+$\cos\theta \to -1$表示推进方向与流向相反（逆流而行）。
+
+\section{本章小结}
+
+本章建立了研究所需的完整物理模型体系。首先给出了二维非定常双涡流流场的
+数学描述，包括流函数方程、速度场表达式和流场结构特征。然后建立了自推进体的
+运动学模型——运动由流场对流与自主推进两部分组成，
+并定义了推进功率与能量消耗的量化方法。最后，形式化了点对点迁移任务，
+引入了直线基准策略作为对照，并定义了能耗比和余弦相似度等评价指标，
+为后续的算法设计与结果分析奠定了基础。

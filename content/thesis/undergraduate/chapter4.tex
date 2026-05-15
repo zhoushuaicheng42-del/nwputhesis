@@ -1,5 +1,335 @@
-%% 第四章
+﻿%% 第四章 仿真结果与分析
 
-\chapter{第四章标题}
-\chaptermark{第四章标题}
+\chapter{仿真结果与分析}
+\chaptermark{仿真结果与分析}
 
+本章基于第二章建立的物理模型和第三章设计的强化学习算法，
+系统展示自推进体在双涡流流场中点对点迁移的仿真结果。
+首先分析流场的基本结构特征，然后从轨迹形态、能耗对比、
+参数影响、训练收敛性和泛化能力等多个维度对智能策略进行评估，
+最后通过余弦相似度分析从物理机制层面揭示智能体"借流而行"的内在机理。
+
+\section{流场基本特征}
+
+图\ref{fig:dg_snapshot}展示了二维非定常双涡流在某典型时刻的流场快照。
+图中箭头表示局部速度矢量，背景颜色表示速度大小。
+可以清晰地观察到上下两个主涡旋结构以及连接两个涡旋的中间通道。
+涡旋中心分别位于$x \approx 0.5$和$x \approx 1.5$处，
+在振荡参数$\epsilon$的作用下，涡旋边界呈现周期性脉动，
+为流体质点在上下区域之间的跨区输运提供了动力学条件。
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig.1.pdf}
+    \caption{二维非定常双涡流流场快照。矢量箭头表示局部速度方向，
+             背景颜色表示速度大小。}
+    \label{fig:dg_snapshot}
+\end{figure}
+
+流场的非定常特性意味着：若自推进体仅沿直线推进而不利用流场结构，
+则需要不断"对抗"横向流动以维持目标方向，从而产生大量无效能耗。
+反之，若智能体能够感知流场方向并顺应有利流向，
+则可以在不增加或少量增加推进能耗的条件下利用流场对流来接近目标。
+
+\section{迁移轨迹对比分析}
+
+图\ref{fig:trajectories}对比了智能体（Smart Agent）与直线基准体（Na\"ive Agent）
+在相同起终点条件下的迁移轨迹。起始点位于左下方，
+目标点位于右上方，二者分布在流场的不同涡旋区域内。
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig.2.pdf}
+    \caption{智能体与直线基准体的迁移轨迹对比。
+             蓝色实线为智能体轨迹，红色虚线为直线基准轨迹，
+             绿色标记起点，红色标记终点。}
+    \label{fig:trajectories}
+\end{figure}
+
+从轨迹形态可以看出，直线基准体严格沿起终点连线运动，
+轨迹为一条直线段。而智能体的轨迹呈现出明显的弯曲特征——
+在运动初期，智能体并非直接朝向目标推进，而是先顺应局部流场方向
+沿涡旋外缘运动，在获得流场对流速度的有效"助力"后，
+再调整方向切入目标所在的涡旋区域。
+
+这种"迂回借流"的策略虽然在路径长度上大于直线方案，
+但大幅减少了为对抗横向流动所需的推进能量投入。
+智能体展示出在"顺应流场"与"朝向目标"之间的动态平衡能力——
+这一行为正是强化学习策略在与环境交互中自主涌现的结果。
+
+\section{能耗对比分析}
+
+图\ref{fig:energy_comparison}给出了智能体与直线基准体在迁移过程中的
+累积能耗随时间的变化曲线。
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig.3.pdf}
+    \caption{智能体与直线基准体的累积能耗对比。
+             蓝色曲线为智能体能耗，红色曲线为直线基准能耗。}
+    \label{fig:energy_comparison}
+\end{figure}
+
+从图中可以观察到以下关键特征：
+
+第一，在迁移过程的前半段，智能体的能耗累积速率明显低于直线基准体。
+这是因为智能体在此阶段主要采用"顺应流场"的策略，
+推进速度较小，更多地依赖流场对流来实现在空间中的位移。
+
+第二，在迁移过程的后期，当智能体需要穿越涡旋边界进入目标区域时，
+能耗累积速率出现短暂上升。这对应着智能体在涡旋间的剪切层区域
+需要施加较大推进力以克服局部强速度梯度。
+
+第三，就整个迁移过程而言，智能体的最终累积能耗约为直线基准体的
+三分之一（$\eta \approx 1/3$），节能效果十分显著。
+这一结果表明，即使在相对简单的双涡流流场中，
+智能地利用流场结构也能带来可观的能耗节约。
+
+\section{自推进强度对迁移策略的影响}
+
+自推进体的最大推进速率$V_{\max}$（或等效地，
+由流场振幅$A$表征的相对推进强度）是影响迁移策略的关键参数。
+图\ref{fig:traj_A}展示了在不同自推进强度$A$下，
+智能体迁移轨迹的形态变化。
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[t]{0.24\textwidth}\centering
+        \includegraphics[width=\textwidth]{A=0.010.png}
+        \caption{$A = 0.010$}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.24\textwidth}\centering
+        \includegraphics[width=\textwidth]{A=0.050.png}
+        \caption{$A = 0.050$}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.24\textwidth}\centering
+        \includegraphics[width=\textwidth]{A=0.080.png}
+        \caption{$A = 0.080$}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.24\textwidth}\centering
+        \includegraphics[width=\textwidth]{A=0.090.png}
+        \caption{$A = 0.090$}
+    \end{subfigure}
+    \\[4pt]
+    \begin{subfigure}[t]{0.24\textwidth}\centering
+        \includegraphics[width=\textwidth]{A=0.100.png}
+        \caption{$A = 0.100$}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.24\textwidth}\centering
+        \includegraphics[width=\textwidth]{A=0.110.png}
+        \caption{$A = 0.110$}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.24\textwidth}\centering
+        \includegraphics[width=\textwidth]{A=0.120.png}
+        \caption{$A = 0.120$}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.24\textwidth}\centering
+        \includegraphics[width=\textwidth]{A=1.000.png}
+        \caption{$A = 1.000$}
+    \end{subfigure}
+    \caption{不同自推进强度$A$下的智能体迁移轨迹。
+             $A$值越小表示流场相对强度越大（推进能力相对弱），
+             轨迹弯曲程度越显著。}
+    \label{fig:traj_A}
+\end{figure}
+
+从图\ref{fig:traj_A}可以观察到明显的规律性变化：
+
+当$A$较小时（$A = 0.010$和$A = 0.050$），
+流场对流相对于自主推进占主导地位，
+智能体的轨迹呈现出高度弯曲的特征——轨迹紧密跟随涡旋流线，
+充分体现了"借流而行"的策略。在此参数区间，
+智能体几乎没有选择"对抗"流场的余地，
+必须顺应涡旋结构才能到达目标。
+
+随着$A$的增大（$A = 0.080$至$A = 0.120$），
+自主推进能力逐渐增强，轨迹的弯曲程度逐渐减弱。
+智能体开始在"顺应流场"与"直接朝向目标"之间进行更灵活的权衡——
+部分轨迹段落仍保留了利用流场的特征，但整体上向直线趋近。
+
+当$A$进一步增大至$A = 1.000$时，自主推进能力显著超过流场对流，
+轨迹几乎退化为直线。此时"借流而行"的节能策略不再具有明显优势，
+因为智能体可以"忽视"流场而直接强力推进至目标。
+
+上述分析表明，基于强化学习的迁移策略在推进能力与流场强度之比
+处于中间范围时最具实际意义——在这一区间内，
+智能体既不能完全"忽视"流场，也不能完全"屈服"于流场，
+而必须在二者之间寻找最优平衡。
+
+\section{训练过程收敛性分析}
+
+图\ref{fig:training}展示了SAC算法的训练过程，包含不同训练阶段的
+轨迹演变和回合奖励的收敛曲线。
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{sub1_10000_steps.pdf}
+        \caption{训练10000步}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{sub2_100000_steps.pdf}
+        \caption{训练100000步}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{sub3_best_model.pdf}
+        \caption{最优模型}
+    \end{subfigure}
+    \\[4pt]
+    \begin{subfigure}[t]{\textwidth}\centering
+        \includegraphics[width=0.7\textwidth]{trainprocess_DG.pdf}
+        \caption{回合奖励随训练步数的变化曲线}
+    \end{subfigure}
+    \caption{训练过程可视化。(a)--(c) 不同训练阶段的轨迹演变，
+             (d) 训练奖励收敛曲线。}
+    \label{fig:training}
+\end{figure}
+
+从图\ref{fig:training}(a)--(c)可以清晰地观察到学习过程
+中策略的逐步演化：
+
+训练初期（图\ref{fig:training}(a)，10000步），
+智能体的运动几乎完全随机，轨迹散乱无章，
+缺乏明确的目标导向性。这是因为在经验积累不足的情况下，
+策略网络的输出接近随机探索。
+
+训练中期（图\ref{fig:training}(b)，100000步），
+智能体开始展现出初步的目标导向行为，轨迹的随机性明显降低，
+但仍存在较大的波动和不稳定性。此时策略网络开始"理解"
+流场的基本结构和目标方向的重要性，但尚未达到精细优化阶段。
+
+训练后期（图\ref{fig:training}(c)，最优模型），
+智能体的轨迹趋于平滑且可重复，展现出明确的"借流而行"策略——
+先顺涡旋运动再切入目标区域。这表明策略网络已经充分学习到
+双涡流流场中的最优能耗迁移模式。
+
+图\ref{fig:training}(d)的奖励收敛曲线提供了定量的训练进程评估。
+从图中可以看出，在训练的初始阶段（前约10000步），
+回合奖励快速上升，对应于策略从随机探索到初步目标导向的过渡。
+随后进入缓慢上升阶段（约10000--100000步），
+策略在网络参数空间中逐步精细调优。
+在训练的后期（约100000步后），回合奖励趋于平稳，
+表明策略已接近局部最优解，训练基本收敛。
+
+值得注意的是，奖励曲线在收敛后仍存在一定幅度的波动。
+这一现象与SAC算法的最大熵框架相吻合——
+即使收敛后策略仍保持一定的随机性（熵项的作用），
+这有助于维持对更优策略的持续探索能力。
+
+\section{泛化能力测试}
+
+为验证训练所得策略的泛化能力——即在训练中未遇到的新起终点组合上
+能否同样表现出节能优势——本文随机选取了三组训练集中未出现的
+起终点对进行测试。
+
+图\ref{fig:generalization}和图\ref{fig:generalization_energy}
+分别展示了三个随机测试案例的迁移轨迹和能耗对比。
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{traj_53_start_[1.652_0.224]_goal_[0.712_0.237].pdf}
+        \caption{案例53：起点(1.652, 0.224)，终点(0.712, 0.237)}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{traj_87_start_[1.375_0.626]_goal_[0.503_0.856].pdf}
+        \caption{案例87：起点(1.375, 0.626)，终点(0.503, 0.856)}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{traj_91_start_[1.941_0.386]_goal_[0.961_0.905].pdf}
+        \caption{案例91：起点(1.941, 0.386)，终点(0.961, 0.905)}
+    \end{subfigure}
+    \caption{随机起终点泛化测试——迁移轨迹对比。
+             蓝色实线为智能体轨迹，红色虚线为直线基准轨迹。}
+    \label{fig:generalization}
+\end{figure}
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{traj_53_ecompare.pdf}
+        \caption{案例53能耗对比}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{traj_87_ecompare.pdf}
+        \caption{案例87能耗对比}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\textwidth}\centering
+        \includegraphics[width=\textwidth]{traj_91_ecompare.pdf}
+        \caption{案例91能耗对比}
+    \end{subfigure}
+    \caption{随机起终点泛化测试——累积能耗对比。}
+    \label{fig:generalization_energy}
+\end{figure}
+
+从轨迹形态来看，三个随机测试案例中智能体的轨迹均呈现出
+与训练案例相似的"迂回借流"特征——并非简单沿直线推进，
+而是顺应局部流场方向并适时调整。
+
+从能耗对比来看，三个案例中智能体的最终累积能耗均明显低于
+直线基准体，能耗比$\eta$均保持在0.5以下。这一结果表明，
+训练所得的策略并非仅仅"记住了"特定起终点对的路径，
+而是真正学习到了双涡流流场的通用结构特征和最优能耗规律，
+因此能够在未见过的起终点组合上展现出良好的泛化性能。
+
+\section{余弦相似度与物理机制分析}
+
+为进一步从物理机制层面揭示智能体"借流而行"的内在机理，
+本文计算了智能体推进方向$\mathbf{v}_{\text{prop}}(t)$与
+局部流场方向$\mathbf{u}(\mathbf{x}(t), t)$之间的余弦相似度
+（定义见公式\ref{eq:cosine_similarity}）。
+
+对有效运动步数（排除零速度数据）进行统计分析后，
+余弦相似度的平均值稳定在约0.5的水平，
+对应平均夹角约为60度。
+
+这一数值的物理含义值得深入解读。若智能体简单地"随波逐流"
+（$\cos\theta \approx 1$），则虽能最小化能耗，
+但完全丧失了向目标方向的横向推进能力，无法完成任务；
+若智能体简单地"无视流场"（$\cos\theta \approx 0$），
+则完全放弃了利用流场的节能机会。
+
+$\cos\theta \approx 0.5$对应的约60度夹角，
+恰好反映了智能体在"顺水推舟"（省力）与"保留横向切入分力"（寻路）
+之间的最优妥协。推进速度矢量可分解为沿流向的分量
+（利用流场对流以减少能耗）和垂直于流向的分量
+（提供向目标方向的横向推进）。二者的权重由强化学习策略
+根据局部流场条件、距目标距离和当前能耗状态动态调整。
+
+这一分析将智能体的节能行为从经验层面的观察
+（"能耗降低了约三分之二"）提升至物理机制层面
+（"推进方向与流向保持约60度的最优夹角"），
+使本研究超越了纯数值对比，深入到了流体物理与智能控制的交叉领域。
+
+\section{本章小结}
+
+本章对仿真结果进行了系统分析与讨论。主要发现包括：
+
+(1) 在双涡流流场中，经过SAC算法训练的智能体能够自主习得
+"借流而行"的迁移策略，其能量消耗仅为直线基准策略的约三分之一。
+
+(2) 自推进强度$A$显著影响迁移策略的形态——
+在弱推进—强流场条件下，策略呈现高度弯曲的轨迹；
+在强推进—弱流场条件下，轨迹趋近于直线。
+最优节能效果在中间参数区间实现。
+
+(3) 训练过程收敛性良好，奖励曲线在约100000步后趋于平稳，
+策略从随机探索逐步演化为稳定的最优行为。
+
+(4) 策略具有良好的泛化能力——在训练中未出现的新起终点组合上
+同样展现出显著的节能效果。
+
+(5) 余弦相似度分析揭示了智能体保持推进方向与流向约60度夹角的
+物理机制，即智能体在"顺流省力"与"横向寻路"之间实现了最优平衡。
