@@ -137,35 +137,15 @@
 
 \section{训练过程收敛性分析}
 
-图\ref{fig:training}展示了SAC算法的训练过程，包含不同训练阶段的
-轨迹演变和以 100 幕为滑动时间窗口内的奖励平均值的曲线。
-
-\begin{figure}[htb]
+\begin{figure}[htbp!]
     \centering
-    \begin{subfigure}[t]{0.32\textwidth}\centering
-        \includegraphics[width=\textwidth]{sub1_10000_steps.pdf}
-        \caption{训练10000步}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[t]{0.32\textwidth}\centering
-        \includegraphics[width=\textwidth]{sub2_100000_steps.pdf}
-        \caption{训练100000步}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[t]{0.32\textwidth}\centering
-        \includegraphics[width=\textwidth]{sub3_best_model.pdf}
-        \caption{最优模型}
-    \end{subfigure}
-    \\[4pt]
-    \begin{subfigure}[t]{\textwidth}\centering
-        \includegraphics[width=0.7\textwidth]{trainprocess_DG.pdf}
-        \caption{回合奖励随训练步数的变化曲线}
-    \end{subfigure}
-    \caption{训练过程可视化。(a)--(c) 不同训练阶段的轨迹演变，
-             (d) 训练奖励收敛曲线。}
+    \includegraphics[width=\textwidth]{trainprocess_DG.pdf}
+    \caption{训练过程中的奖励随训练时长的变化。蓝色点代表了每一幕中颗粒获得的奖励，红色曲线代表了以 100 幕为滑动时间窗口内的奖励平均值。插图展示了一个失败的模型、一个成功的模型（奖励适中）和另一个成功模型（奖励最高）的轨迹。}
     \label{fig:training}
 \end{figure}
 
+图\ref{fig:training}展示了SAC算法的训练过程，包含不同训练阶段的
+轨迹演变和以 100 幕为滑动时间窗口内的奖励平均值的曲线。
 从图\ref{fig:training}(a)--(c)可以清晰地观察到学习过程
 中策略的逐步演化：
 
@@ -203,46 +183,42 @@
 能否同样表现出节能优势——本文随机选取了一百组训练集中未出现的
 起终点对进行测试。
 
-图\ref{fig:generalization}和图\ref{fig:generalization_energy}
+图\ref{fig:generalization_energy}
 分别展示了三个随机测试案例的迁移轨迹和能耗对比。
 
-\begin{figure}[htb]
+\begin{figure}[htbp!]
     \centering
     \begin{subfigure}[t]{0.32\textwidth}\centering
         \includegraphics[width=\textwidth]{traj_53_start_[1.652_0.224]_goal_[0.712_0.237].pdf}
-        %\caption{案例53：起点(1.652, 0.224)，终点(0.712, 0.237)}
+        \caption{}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{0.32\textwidth}\centering
         \includegraphics[width=\textwidth]{traj_87_start_[1.375_0.626]_goal_[0.503_0.856].pdf}
-        %\caption{案例87：起点(1.375, 0.626)，终点(0.503, 0.856)}
+        \caption{}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{0.32\textwidth}\centering
         \includegraphics[width=\textwidth]{traj_91_start_[1.941_0.386]_goal_[0.961_0.905].pdf}
-        %\caption{案例91：起点(1.941, 0.386)，终点(0.961, 0.905)}
+        \caption{}
     \end{subfigure}
-    \caption{随机起终点泛化测试——迁移轨迹对比。}
-    \label{fig:generalization}
-\end{figure}
-
-\begin{figure}[htb]
-    \centering
+    \hfill
     \begin{subfigure}[t]{0.32\textwidth}\centering
         \includegraphics[width=\textwidth]{traj_53_ecompare.pdf}
-        %\caption{案例53能耗对比}
+        \caption{}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{0.32\textwidth}\centering
         \includegraphics[width=\textwidth]{traj_87_ecompare.pdf}
-        %\caption{案例87能耗对比}
+        \caption{}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{0.32\textwidth}\centering
         \includegraphics[width=\textwidth]{traj_91_ecompare.pdf}
-        %\caption{案例91能耗对比}
+        \caption{}
     \end{subfigure}
-    \caption{随机起终点泛化测试——累积能耗对比。}
+    \caption{(a)-(c)展示了三个随机测试案例的智能体迁移轨迹。
+             (d)-(f)展示了对应三个案例中智能体与直线基准体的累积能耗对比曲线。}
     \label{fig:generalization_energy}
 \end{figure}
 

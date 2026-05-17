@@ -1,272 +1,298 @@
-﻿%% 第三章 强化学习算法设计
+%% 第三章 强化学习算法设计
 
 \chapter{强化学习算法设计}
 \chaptermark{强化学习算法设计}
 
-本章详细介绍用于训练自推进体迁移策略的强化学习算法。
-首先阐述强化学习的基本框架与Soft Actor-Critic (SAC) 算法的核心原理，
-然后给出面向点对点迁移任务的状态空间、动作空间与奖励函数的具体设计，
+本章阐述用于训练自驱动颗粒迁移策略的强化学习算法设计。
+首先介绍强化学习的基本概念和算法分类，在此基础上引入Soft Actor-Critic (SAC) 算法，
+重点阐述其熵正则化机制、网络架构与参数更新方法；
+随后给出面向点对点迁移任务的状态空间、动作空间与奖励函数的具体设计；
 最后介绍训练流程与超参数配置方案。
 
 \section{强化学习基本框架}
 
-强化学习是一种通过智能体与环境交互来学习最优决策策略的机器学习范式。
-在每个离散时间步$t$，智能体观测环境状态$s_t$，根据策略$\pi(a_t | s_t)$
-选择动作$a_t$，执行后环境返回新状态$s_{t+1}$和奖励信号$r_t$。
-智能体的目标是学习最大化累积期望回报
+强化学习是一类通过智能体与环境交互来学习最优决策策略的机器学习方法。
+在每一个离散时间步$t$，智能体观测环境状态$s_t$，依据策略$\pi(a_t | s_t)$
+选择动作$a_t$并执行，环境据此返回新状态$s_{t+1}$和即时奖励信号$r_t$。
+智能体的学习目标是最大化累积期望回报
 
 \begin{equation}
     J(\pi) = \mathbb{E}_{\pi}\left[\sum_{t=0}^{\infty} \gamma^t r_t\right],
     \label{eq:rl_objective}
 \end{equation}
 
-其中$\gamma \in (0, 1]$为折扣因子，用于权衡近期奖励与远期奖励的重要性。
+其中$\gamma \in (0, 1]$为折扣因子，用以平衡近期奖励与远期奖励的相对重要性。
 
-在连续控制问题中，策略$\pi$和动作空间均为连续函数，
-传统的离散化方法面临维度灾难问题。
-Actor-Critic架构通过同时维护策略网络（Actor）和价值网络（Critic）
-来高效解决连续控制问题：Actor负责生成动作，Critic负责评估当前策略的优劣。
+按照优化目标的不同，现代强化学习算法可大致分为基于值函数的方法和
+基于策略优化的方法两类。基于值函数的算法（如DQN）
+通过学习最优动作值函数$Q^*(s,a)$的近似$Q_\theta(s,a)$间接确定策略，
+其优化过程与具体策略无关；基于策略梯度的算法（如PPO）
+则将策略直接参数化为$\pi_\theta(a|s)$，通过对目标$J(\pi_\theta)$做梯度上升
+来优化策略参数。将值函数方法与策略优化方法相结合的Actor-Critic架构
+能够同时利用二者优势，在连续控制任务中取得了优异的性能。
 
 \section{Soft Actor-Critic 算法}
 
-\subsection{最大熵强化学习框架}
+\subsection{熵正则化强化学习}
 
-Soft Actor-Critic (SAC) 算法是一种基于最大熵框架的离线策略
-Actor-Critic算法。与标准强化学习仅最大化累积奖励不同，
-SAC在目标函数中引入策略熵项，鼓励智能体在追求高奖励的同时保持策略的随机性
+Soft Actor-Critic（SAC）是一种以非策略梯度方式优化随机策略的
+离线Actor-Critic算法。
+区别于标准强化学习仅最大化累积奖励，SAC的核心特征是在优化目标中
+引入策略的熵正则化项。
+
+熵是信息论中度量随机变量不确定性的基本概念。设随机变量$x$服从分布$P$，
+则其熵$H$定义为
 
 \begin{equation}
-    J(\pi) = \mathbb{E}_{\pi}\left[\sum_{t=0}^{\infty} \gamma^t \left(r_t + \alpha \mathcal{H}(\pi(\cdot | s_t))\right)\right],
-    \label{eq:sac_objective}
+    H(P) = \underset{x \sim P}{\mathbb{E}}\left[-\log P(x)\right].
+    \label{eq:entropy_def}
 \end{equation}
 
-其中$\mathcal{H}(\pi(\cdot | s_t)) = -\mathbb{E}_{a \sim \pi}[\log \pi(a | s_t)]$
-为策略的熵，$\alpha$为温度参数，用于调节熵项相对于奖励项的重要程度。
+在熵正则化强化学习中，智能体在每个时间步获得的奖励附加与策略熵相关的正则项，
+优化目标由此变为
 
-引入熵项具有两方面的优势：第一，促进探索——
-在训练初期奖励信号稀疏时，熵最大化鼓励智能体尝试多样化的行为，
-避免过早陷入局部最优；第二，增强鲁棒性——
-最优策略趋向于在多个相近的优质动作之间保持概率分布，
-而非退化到单一确定性动作，这对存在非定常扰动的湍流环境尤为重要。
+\begin{equation}
+    \pi^{*} = \arg\max_{\pi} \underset{\tau \sim \pi}{\mathbb{E}}\left[
+        \sum_{t=0}^{\infty} \gamma^{t}
+        \left(R(s_t, a_t, s_{t+1}) + \alpha H(\pi(\cdot | s_t))\right)
+    \right],
+    \label{eq:entropy_rl_obj}
+\end{equation}
+
+其中$\alpha > 0$为温度系数，控制熵项相对于奖励项的权重。
+
+引入熵正则化具有两方面的优势。其一，促进探索——
+增大熵的权重等价于鼓励智能体输出更为多样的动作，
+可有效防止策略过早收敛至局部最优解。
+其二，增强鲁棒性——最优策略倾向于在多个相近的优质动作之间维持一定的概率分布，
+而非退化为单一确定性动作。在湍流这类具有非定常扰动的环境中，
+这一特性对策略的泛化能力尤为重要。
 
 \subsection{网络架构}
 
-SAC算法包含五个神经网络：
+SAC算法同时维护五个神经网络：
 
-(1) 策略网络（Actor）$\pi_\phi(a_t | s_t)$：以状态$s_t$为输入，
-输出动作的均值$\mu_\phi(s_t)$和标准差$\sigma_\phi(s_t)$，
-动作从高斯分布$\mathcal{N}(\mu_\phi, \sigma_\phi^2)$中采样获得，
-经tanh压缩映射至动作空间范围内。
+(1) 策略网络（Actor）$\pi_\theta(a_t | s_t)$：以状态$s_t$为输入，
+输出动作分布的参数。动作从高斯分布中采样后经tanh函数压缩至
+动作空间的合法范围内。
 
 (2) 两个Q函数网络（Critic）$Q_{\theta_1}(s_t, a_t)$和$Q_{\theta_2}(s_t, a_t)$：
-分别估计在状态$s_t$执行动作$a_t$后的期望累积回报。
-采用双Q网络的设计可以有效缓解Q值高估偏差问题——
-在更新时取两个网络中Q值较小者作为目标。
+分别估计在状态$s_t$下执行动作$a_t$的期望累积回报。
+采用双Q网络设计可以减轻Q值估计中的系统性高估问题：
+更新时以两个Q网络中较小的值作为目标值。
 
 (3) 两个目标Q网络$Q_{\bar{\theta}_1}$和$Q_{\bar{\theta}_2}$：
-参数通过软更新方式从对应的Q网络缓慢复制而来，
-用于计算TD目标值，提高训练稳定性。
+其参数通过指数移动平均从对应Q网络软更新而来，
+用于计算时序差分目标值以提高训练稳定性。
 
 \subsection{损失函数与参数更新}
 
-Q网络的损失函数为均方Bellman误差
+对于Q网络的训练，SAC采用均方Bellman误差（MSBE）作为损失函数。
+以经验回放池$\mathcal{D}$中采样的转移数据为依据，
+每个Q函数$Q_{\theta_i}$的损失函数为
 
 \begin{equation}
-    \mathcal{L}_Q(\theta_i) = \mathbb{E}_{(s_t, a_t, r_t, s_{t+1}) \sim \mathcal{D}}
-        \left[\left(Q_{\theta_i}(s_t, a_t) - y(r_t, s_{t+1})\right)^2\right],
+    L(\theta_i, \mathcal{D}) = \mathbb{E}_{(s, a, r, s', d) \sim \mathcal{D}}\left[
+        \left(Q_{\theta_i}(s, a) - y(r, s', d)\right)^2
+    \right],
     \label{eq:q_loss}
 \end{equation}
 
-其中$\mathcal{D}$为经验回放池，目标值$y$为
+目标值$y$的计算同时融入了熵项和双Q网络的最小值操作
 
 \begin{equation}
-    y(r_t, s_{t+1}) = r_t + \gamma \left(\min_{i=1,2} Q_{\bar{\theta}_i}(s_{t+1}, a') - \alpha \log \pi_\phi(a' | s_{t+1})\right),
+    y(r, s', d) = r + \gamma(1 - d)\left(
+        \min_{j=1,2} Q_{\bar{\theta}_j}(s', \tilde{a}') -
+        \alpha \log \pi_\theta(\tilde{a}' | s')
+    \right),
     \label{eq:target_value}
 \end{equation}
 
-$a' \sim \pi_\phi(\cdot | s_{t+1})$为从当前策略中采样的动作。
+其中$\tilde{a}' \sim \pi_\theta(\cdot | s')$表示从当前策略中重新采样的动作，
+$d$为回合终止标志。
 
-策略网络的损失函数为最大化Q值估计与熵项的组合
+策略网络$\pi_\theta$的优化方向为最大化Q值估计与熵项的组合，
+其梯度上升所使用的梯度为
 
 \begin{equation}
-    \mathcal{L}_\pi(\phi) = \mathbb{E}_{s_t \sim \mathcal{D}, a \sim \pi_\phi}
-        \left[\alpha \log \pi_\phi(a | s_t) - \min_{i=1,2} Q_{\theta_i}(s_t, a)\right].
+    \nabla_\theta \frac{1}{|\mathcal{B}|} \sum_{s \in \mathcal{B}}\left(
+        \min_{i=1,2} Q_{\theta_i}(s, \tilde{a}_\theta(s)) -
+        \alpha \log \pi_\theta(\tilde{a}_\theta(s) | s)
+    \right),
     \label{eq:pi_loss}
 \end{equation}
 
-温度参数$\alpha$的自适应调节通过最小化以下目标实现
-
-\begin{equation}
-    \mathcal{L}(\alpha) = \mathbb{E}_{s_t \sim \mathcal{D}, a \sim \pi_\phi}
-        \left[-\alpha \log \pi_\phi(a | s_t) - \alpha \bar{\mathcal{H}}\right],
-    \label{eq:alpha_loss}
-\end{equation}
-
-其中$\bar{\mathcal{H}}$为目标熵，通常设为动作空间维度的负值。
-
-\section{面向迁移任务的状态与动作空间设计}
-
-\subsection{状态空间}
-
-智能体的状态观测$s_t \in \mathbb{R}^{n_s}$由以下信息组成：
-
-(1) 自推进体的当前位置坐标$\mathbf{x}(t) = (x(t), y(t))$。
-
-(2) 目标点的位置坐标$\mathbf{x}_g = (x_g, y_g)$。
-
-(3) 自推进体当前位置的局部流场速度
-$\mathbf{u}(\mathbf{x}(t), t) = (u(x, y, t), v(x, y, t))$。
-该信息表征智能体对周围环境的感知能力。
-
-(4) 相对位置矢量$\Delta\mathbf{x}(t) = \mathbf{x}_g - \mathbf{x}(t)$，
-提供智能体相对于目标点的方向与距离信息。
-
-综合以上，状态向量的维度为$n_s = 8$（2维位置、2维目标、2维流场速度、2维相对位置）。
-为提升训练稳定性，所有状态分量在输入网络前进行标准化处理，
-将其映射至区间$[-1, 1]$范围内。
-
-\subsection{动作空间}
-
-动作$a_t \in \mathbb{R}^2$定义为自主推进速度矢量$\mathbf{v}_{\text{prop}}(t)$
-的两个分量（归一化形式）
-
-\begin{equation}
-    a_t = \left(\frac{v_{\text{prop}, x}}{V_{\max}}, \frac{v_{\text{prop}, y}}{V_{\max}}\right),
-    \label{eq:action}
-\end{equation}
-
-动作经tanh函数压缩后，每个分量取值范围为$[-1, 1]$，
-对应推进速度分量在$[-V_{\max}, V_{\max}]$之间连续可调。
-此设计赋予了智能体在大小和方向上完全的连续控制能力。
-
-\subsection{回合终止条件}
-
-每个训练回合在满足以下任一条件时终止：
-
-(1) 成功到达：自推进体进入目标点邻域内（$|\mathbf{x} - \mathbf{x}_g| \leq r_{\text{goal}}$）；
-
-(2) 超时：仿真步数达到预设的最大步数$N_{\max}$；
-
-(3) 越界：自推进体运动至流场区域之外。
+其中$\mathcal{B}$为从经验回放池$\mathcal{D}$中随机抽取的一个批次样本。
+本文采用固定的熵正则化系数$\alpha = 0.1$，不随训练过程自适应调节。
+关于SAC算法的更多细节可参见文献。
 
 \section{奖励函数设计}
 
-奖励函数的设计是强化学习成功的关键。
-本文将能耗最小化与任务完成两个目标统一在标量奖励信号中，
-具体设计为
+奖励函数决定了智能体从环境获得的反馈信号，是连接任务目标与策略优化的关键。
+本文将迁移任务的完成与能耗的最小化统一在标量奖励信号中，
+设计了由三个分量构成的复合奖励函数
 
 \begin{equation}
-    r_t = r_{\text{step}} + r_{\text{energy}} + r_{\text{goal}} + r_{\text{boundary}},
-    \label{eq:reward}
+    r(t) = r_s(t) + r_e(t) + r_h(t),
+    \label{eq:reward_total}
 \end{equation}
 
-各项含义如下：
+其中$r_s$、$r_e$和$r_h$分别为状态奖励、能量奖励和时间奖励，
+以下逐一给出各分量的定义。
 
-(1) 基础步进惩罚$r_{\text{step}}$：每步给予恒定的负奖励$r_{\text{step}} = -c_0$，
-鼓励智能体尽快完成任务以减少累积步数。
-
-(2) 能耗惩罚$r_{\text{energy}}$：与推进功率成正比
+状态奖励$r_s$基于颗粒的当前位置与目标点之间的几何关系。
+若颗粒迁移出流场腔体的有效区域，则给予$-10$的惩罚；
+若颗粒相对于上一时间步更加靠近目标点，即
+$\|\mathbf{x}_{\text{agent}}^{t+1} - \mathbf{x}_{\text{goal}}\|_2 <
+\|\mathbf{x}_{\text{agent}}^{t} - \mathbf{x}_{\text{goal}}\|_2$，
+则获得一个基础正向奖励$e_{\text{basic}}$；
+其余情况下奖励为零。因此$r_s$可表示为
 
 \begin{equation}
-    r_{\text{energy}} = -c_1 \cdot |\mathbf{v}_{\text{prop}}(t)|^2,
+    r_s = \begin{cases}
+        -10, & \text{颗粒迁移出腔体范围},\\
+        e_{\text{basic}}, &
+        \|\mathbf{x}_{\text{agent}}^{t+1} - \mathbf{x}_{\text{goal}}\|_2 <
+        \|\mathbf{x}_{\text{agent}}^{t} - \mathbf{x}_{\text{goal}}\|_2,\\
+        0, & \text{其他}.
+    \end{cases}
+    \label{eq:state_reward}
+\end{equation}
+
+能量奖励$r_e$基于颗粒在迁移过程中因自主驱动而产生的能量消耗。
+设颗粒的推进速度$\mathbf{u}_{\text{propel}}$与当地背景流场速度
+$\mathbf{u}_{\text{fluid}}$之间的夹角为$\alpha$。
+当二者方向一致（即$0^{\circ} \leq \alpha \leq 90^{\circ}$）时，
+颗粒获得正奖励$e_{\text{basic}} + (e_{\max} - e)$，
+其中$e = \frac{1}{2}\|\mathbf{u}_{\text{propel}}\|^2$表示当前步的推进动能，
+$e_{\max} = \frac{1}{2}(\|\mathbf{u}_{\text{propel}}\|_{\max})^2$为最大允许推进动能，
+$e_{\text{basic}} = e_{\max}$。
+这意味着在顺流条件下，颗粒输出的推进速度越低，获得的能量奖励越高。
+反之，当颗粒逆流行进（$90^{\circ} < \alpha \leq 180^{\circ}$）时，
+将受到惩罚$-(e_{\text{basic}} + e)$，推进速度越高则惩罚越重。
+综上，$r_e$可表示为
+
+\begin{equation}
+    r_e = \begin{cases}
+        e_{\text{basic}} + (e_{\max} - e), &
+        0^{\circ} \leq \alpha \leq 90^{\circ},\\
+        -(e_{\text{basic}} + e), &
+        90^{\circ} < \alpha \leq 180^{\circ}.
+    \end{cases}
     \label{eq:energy_reward}
 \end{equation}
 
-其中$c_1$为能耗惩罚系数。智能体在非必要情况下应减少自主推进，
-尽可能利用流场对流实现"借力而行"。
-
-(3) 到达奖励$r_{\text{goal}}$：当智能体成功进入目标邻域时给予大的正奖励
+时间奖励$r_h$基于颗粒完成任务所需的时间消耗。
+若颗粒在最大允许时间$t_{\max}$内未能到达目标点，则给予$-5$的惩罚；
+若颗粒已进入目标点的邻域（即$\|\mathbf{x}_{\text{agent}}^{t} -
+\mathbf{x}_{\text{goal}}\|_2 < \delta_0$，其中$\delta_0$为一个小阈值），
+则认为颗粒成功到达终点，给予正奖励$\varepsilon(t_{\max} - t)$，
+该奖励与剩余可用时间成正比，颗粒到达得越早奖励越高；
+其余情况奖励为零。因此$r_h$可表示为
 
 \begin{equation}
-    r_{\text{goal}} = 
-    \begin{cases}
-        +R_{\text{arrive}}, & |\mathbf{x} - \mathbf{x}_g| \leq r_{\text{goal}}, \\
-        0, & \text{否则}.
+    r_h = \begin{cases}
+        -5, & t \geq t_{\max},\\
+        \varepsilon(t_{\max} - t), &
+        \|\mathbf{x}_{\text{agent}}^{t} - \mathbf{x}_{\text{goal}}\|_2 < \delta_0,\\
+        0, & \text{其他}.
     \end{cases}
-    \label{eq:goal_reward}
+    \label{eq:time_reward}
 \end{equation}
 
-(4) 越界惩罚$r_{\text{boundary}}$：当智能体超出流场区域时给予负奖励。
-
-此外，为引导智能体在训练初期向目标方向探索，可引入分阶段引导策略：
-在训练初期加入与相对距离成比例的接近奖励$r_{\text{approach}} = -c_2 \cdot |\Delta\mathbf{x}|$，
-随着训练进行逐步减小该系数至零。
-
+上述奖励设计体现了如下的权衡逻辑：在单个时间步内，
+当颗粒既向目标靠近、又顺流行进时，由于$e_{\text{basic}} + (e_{\max} - e) > e_{\text{basic}}$，
+减少能量消耗是当前步的主要优化目标，接近终点为次要目标。
+但在整个回合尺度上，由于时间奖励的累积期望大于状态与能量奖励之和，
+即$\mathbb{E}[\sum r_h] > \mathbb{E}[\sum (r_s + r_e)]$，
+尽快抵达目标点始终是首要目标，能耗最小化次之。
+这种双层目标设计使智能体在高效完成迁移任务的同时，
+自主学习利用背景湍流降低自身推进能耗。
 \section{训练流程与超参数配置}
 
 \subsection{训练流程}
 
-完整的训练流程如算法\ref{alg:training}所述。每个训练回合开始时，
-智能体被重置至起始位置$\mathbf{x}_0$。在每个时间步中，
-智能体根据当前状态观测$s_t$通过策略网络生成动作$a_t$，
-执行后更新位置并计算奖励$r_t$。
-经验元组$(s_t, a_t, r_t, s_{t+1})$被存入经验回放池$\mathcal{D}$。
-每隔固定步数，从回放池中随机采样一批经验数据用于更新网络参数。
+SAC算法的训练流程如算法\ref{alg:training}所述。
+训练开始前，随机初始化策略网络参数$\theta$和两个Q网络参数$\theta_1, \theta_2$，
+并将目标网络参数同步为$\bar{\theta}_1 \leftarrow \theta_1, \bar{\theta}_2 \leftarrow \theta_2$。
+在每个环境交互步中，智能体观测当前状态$s$，
+依据策略网络采样动作$a \sim \pi_\theta(\cdot | s)$并执行，
+获得下一状态$s'$、奖励$r$和终止标志$d$，
+将转移元组$(s, a, r, s', d)$存入经验回放池$\mathcal{D}$。
+当回放池中样本数量达到预设的最小阈值后，
+每隔固定步数从中随机采样一批数据用于网络参数的更新。
+
+具体地，每次更新时从$\mathcal{D}$中抽取批大小为$N_{\text{batch}}$的样本$\mathcal{B}$，
+按式(\ref{eq:target_value})计算目标Q值，通过梯度下降最小化MSBE损失以更新两个Q网络，
+再通过单步梯度上升优化策略网络，最后以指数移动平均的方式软更新目标网络。
+回合终止后环境重置，进入下一回合。
 
 \begin{algorithm}[htbp]
     \caption{SAC训练流程}
     \label{alg:training}
-    \begin{algorithmic}[1]
-        \Require 流场环境、起始点$\mathbf{x}_0$、目标点$\mathbf{x}_g$、最大回合数$M$
-        \Ensure 训练好的策略网络$\pi_\phi$
-        \State 初始化策略网络$\pi_\phi$、Q网络$Q_{\theta_1}, Q_{\theta_2}$、目标Q网络$Q_{\bar{\theta}_1}, Q_{\bar{\theta}_2}$
-        \State 初始化经验回放池$\mathcal{D}$、温度参数$\alpha$
-        \For{回合 $= 1$ \textbf{到} $M$}
-            \State 重置智能体位置$\mathbf{x} \gets \mathbf{x}_0$，$t \gets 0$
-            \While{未终止}
-                \State 观测状态$s_t$，采样动作$a_t \sim \pi_\phi(\cdot | s_t)$
-                \State 执行动作$a_t$，更新位置$\mathbf{x}$，获取奖励$r_t$
-                \State 存储$(s_t, a_t, r_t, s_{t+1})$至$\mathcal{D}$
-                \If{更新时机}
-                    \State 从$\mathcal{D}$采样一批数据
-                    \State 更新Q网络参数$\theta_1, \theta_2$
-                    \State 更新策略网络参数$\phi$
-                    \State 自适应更新温度参数$\alpha$
-                    \State 软更新目标Q网络参数$\bar{\theta}_1, \bar{\theta}_2$
-                \EndIf
-                \State $t \gets t + 1$
-            \EndWhile
+    \begin{algorithmic}
+        \Statex \textbf{初始化：}
+        \State 随机初始化策略网络参数 $\theta$ 及两个Q网络参数 $\theta_1, \theta_2$
+        \State 初始化空的经验回放池 $\mathcal{D}$
+        \State 同步目标网络：$\bar{\theta}_1 \leftarrow \theta_1,\; \bar{\theta}_2 \leftarrow \theta_2$
+        \Statex
+        \For{$t = 0, 1, 2, \dots$}
+            \State 观测状态 $s$，采样动作 $a \sim \pi_\theta(\cdot | s)$ 并执行
+            \State 接收下一状态 $s'$、奖励 $r$ 及终止标志 $d$
+            \State 将 $(s, a, r, s', d)$ 存入 $\mathcal{D}$
+            \If{$d$ 为真}
+                \State 重置环境
+                \State \textbf{continue}
+            \EndIf
+            \If{回放池样本充足}
+                \For{更新次数}
+                    \State 从 $\mathcal{D}$ 中采样批数据 $\mathcal{B}$
+                    \State 按式(\ref{eq:target_value})计算目标值 $y(r, s', d)$
+                    \State 梯度下降更新Q网络参数 $\theta_i$
+                    \State 梯度上升更新策略网络参数 $\theta$
+                    \State 软更新目标网络：$\bar{\theta}_i \leftarrow \tau \bar{\theta}_i + (1-\tau) \theta_i$
+                \EndFor
+            \EndIf
         \EndFor
-        \State \Return $\pi_\phi$
     \end{algorithmic}
 \end{algorithm}
 
 \subsection{超参数配置}
 
-本文所采用的主要超参数如表\ref{tab:hyperparams}所示。
-神经网络采用全连接前馈架构，Actor和Critic网络均包含两个隐藏层，
-每层256个神经元，激活函数为ReLU。
+神经网络采用全连接前馈架构，策略网络和Q网络均包含两个隐藏层，
+每层256个神经元，激活函数使用tanh。
 经验回放池容量为$10^6$条经验，批采样大小为256。
+本文采用的SAC算法使用固定的熵正则化系数$\alpha = 0.1$，
+不随训练过程自适应调整。主要超参数汇总于表\ref{tab:hyperparams}。
 
 \begin{table}[!h]
-    \caption{主要超参数配置}
+    \caption{本文中SAC算法使用的主要超参数}
     \label{tab:hyperparams}
     \centering
     \begin{tabular}{l|c}
         \hline
         参数 & 取值 \\ \hline
-        折扣因子 $\gamma$ & 0.99 \\
-        策略网络学习率 & $3 \times 10^{-4}$ \\
-        Q网络学习率 & $3 \times 10^{-4}$ \\
-        温度参数学习率 & $3 \times 10^{-4}$ \\
-        软更新系数 $\tau$ & 0.005 \\
-        目标熵 $\bar{\mathcal{H}}$ & $-2$ \\
-        回放池容量 & $10^6$ \\
+        学习率 & $3 \times 10^{-4}$ \\
+        经验回放池容量 & $10^6$ \\
+        网络更新间隔步长 & 100 \\
         批采样大小 & 256 \\
-        最大回合数 & $5 \times 10^3$ \\
-        回合最大步数 & $2 \times 10^3$ \\
+        折扣因子 $\gamma$ & 0.99 \\
+        熵正则化系数 $\alpha$ & 0.1 \\
         \hline
     \end{tabular}
 \end{table}
 
 \section{本章小结}
 
-本章系统阐述了面向自推进体能耗优化迁移任务的强化学习算法设计。
-首先介绍了强化学习基本框架和SAC算法的核心原理，重点阐述了最大熵框架
-在促进探索和增强鲁棒性方面的优势。然后详细设计了状态空间（8维，
-包含位置、目标、流场速度和相对位置信息）和动作空间（2维连续向量，
-对应推进速度分量）。奖励函数的设计综合考虑了步进惩罚、能耗惩罚、
-到达奖励和越界惩罚，与分阶段引导策略相结合，
-在任务完成与能耗最小化之间实现了有效平衡。
-最后给出了完整的训练流程伪代码和关键超参数配置，
-为后续仿真实验提供了算法实现基础。
+本章系统阐述了面向自驱动颗粒能耗优化迁移任务的强化学习算法设计。
+首先介绍了强化学习的基本框架和算法分类，在此基础上引入SAC算法，
+重点阐述了熵正则化机制的原理与优势：通过最大化策略的熵来促进探索并增强鲁棒性。
+随后详细给出了包含策略网络和双Q网络的五网络架构，
+以及基于均方Bellman误差和策略梯度上升的参数更新方法，
+采用固定熵正则化系数$\alpha = 0.1$与tanh激活函数。
+
+奖励函数采用状态奖励$r_s$、能量奖励$r_e$和时间奖励$r_h$三元结构：
+$r_s$基于颗粒与目标点的相对位置关系，$r_e$基于推进速度与背景流方向的夹角，
+$r_h$基于任务完成的时间消耗。该设计在单步尺度上偏向能耗最小化，
+在回合尺度上保证任务优先完成，实现了迁移效率与能量节省的有效折中。
+最后给出了完整的训练流程伪代码和超参数配置表，为后续仿真实验提供了算法实现基础。
