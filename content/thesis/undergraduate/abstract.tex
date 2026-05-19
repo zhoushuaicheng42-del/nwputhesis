@@ -2,23 +2,48 @@
 
 % 中文摘要
 \begin{abstract}
-无人机在复杂大气环境中实现低能耗长航时飞行是航空工程领域的重要挑战。自然界中的鸟类能够巧妙利用湍流环境中的上升气流进行长时间滑翔，这为无人机节能飞行策略的设计提供了仿生学启示。本文从活性物质物理与非平衡统计力学的视角出发，将无人机滑翔建模为自推进体在非定常流场中的迁移问题，并结合深度强化学习算法探索最优能耗策略。
+无人机在复杂大气环境中实现低能耗长航时飞行是航空工程领域的重要挑战。
+自然界中的鸟类能够巧妙利用湍流环境中的上升气流进行长时间滑翔，
+这为无人机节能飞行策略的设计提供了仿生学启示。
+本文从活性物质物理与非平衡统计力学的视角出发，
+将无人机滑翔建模为自推进体在非定常流场中的迁移问题，
+并结合深度强化学习算法探索最优能耗策略。
 
-本研究构建了二维非定常双涡流（Double-Gyre）流场作为理论验证环境，建立了自推进体的运动学模型，定义了推进功率与能量消耗的量化方法。采用基于最大熵框架的Soft Actor-Critic（SAC）连续控制算法，设计了以最小能耗与成功到达目标为核心的奖励函数，训练智能体在复杂流场中自主规划迁移路径。为验证强化学习策略的节能效果，本文引入了"直线推进"基准策略作为对照。
+本研究构建了二维非定常双涡流流场作为理论验证环境，
+建立了自推进体的运动学模型，定义了推进功率与能量消耗的量化方法。
+采用基于最大熵框架的Soft Actor-Critic（SAC）连续控制算法，
+设计了以最小能耗与成功到达目标为核心的三元复合奖励函数，
+训练智能体在复杂流场中自主规划迁移路径。
+为验证强化学习策略的节能效果，
+本文引入了基于时间对齐的直线推进基准策略作为对照。
 
-仿真结果表明，经过训练的智能体能够有效利用流场中的涡结构实现"借流而行"，其能量消耗仅为直线基准策略的约五分之一。通过引入余弦相似度指标对推进方向与流场方向的相关性进行定量分析，从物理机制层面验证了智能体在顺应流向与向目标推进之间实现了最优妥协。进一步研究了不同涡旋振幅对迁移轨迹形态和能耗的影响，并通过随机起终点测试验证了策略的泛化能力。本研究为无人机在湍流环境中的智能节能飞行提供了理论依据与算法框架。
+仿真结果表明，经过训练的智能体能够有效利用流场中的涡结构
+实现借流而行，其能量消耗仅为直线基准策略的约五分之一。
+通过对流场振幅、横向振荡幅度和角频率等关键参数的敏感性分析，
+揭示了策略的鲁棒性边界和失效模式。
+训练过程收敛性良好，策略在约200000步后趋于稳定。
+随机起终点测试验证了策略的泛化能力——
+智能体所学到的是流场的通用结构知识而非特定路径的记忆。
+通过引入余弦相似度指标对推进方向与流场方向的相关性进行定量分析，
+发现智能体推进方向与流向保持约60度的最优夹角，
+从物理机制层面验证了智能体在顺应流向与向目标推进之间实现了最优妥协。
+这一发现将活性物质理论中关于自驱动颗粒在非平衡序参量场中
+寻找最小耗散路径的物理图像，
+与宏观无人机滑翔的工程问题建立了定量联系，
+为无人机在湍流环境中的智能节能飞行提供了理论依据与算法框架。
 
-\keywordslist{强化学习；自推进体；能耗优化；双涡流；迁移策略}
+\keywordslist{强化学习；自推进体；能耗优化；双涡流；迁移策略；活性物质}
 \end{abstract}
+
 
 % 英文摘要
 \begin{engabstract}
-Achieving low-energy long-endurance flight for unmanned aerial vehicles (UAVs) in complex atmospheric environments remains a critical challenge in aeronautical engineering. Birds in nature can skillfully exploit updrafts in turbulent environments for prolonged soaring, providing bio-inspired insights for designing energy-efficient flight strategies. This thesis approaches UAV soaring from the perspective of active matter physics and non-equilibrium statistical mechanics, modeling it as the migration of a self-propelling agent in unsteady flow fields, and employs deep reinforcement learning to explore optimal energy consumption strategies.
+Achieving low-energy long-endurance flight for UAVs in complex atmospheric environments remains a critical challenge in aeronautical engineering. Birds skillfully exploit updrafts to soar for extended periods, offering bio-inspired insights for energy-efficient flight. This thesis approaches UAV soaring through the lens of active matter physics and non-equilibrium statistical mechanics, modeling it as the migration of a self-propelling agent in an unsteady flow field, and employs deep reinforcement learning to discover optimal energy strategies.
 
-A two-dimensional unsteady double-gyre flow is constructed as a proof-of-concept environment. The kinematic model of the self-propelling agent is established, with propulsion power and energy consumption quantitatively defined. The Soft Actor-Critic (SAC) algorithm under the maximum entropy framework is adopted, with a reward function designed around minimal energy consumption and successful target arrival, to train the agent to autonomously plan migration paths in complex flows. A naive straight-moving strategy is introduced as a baseline for comparison.
+A two-dimensional unsteady double-gyre flow serves as the proof-of-concept environment. The agent's kinematic model is formulated with propulsion power and energy consumption quantitatively defined. The Soft Actor-Critic (SAC) algorithm under the maximum entropy framework is used, guided by a three-term reward function that balances minimal energy consumption with successful target arrival. A time-aligned naive straight-moving strategy provides the baseline for comparison.
 
-Simulation results demonstrate that the trained agent can effectively leverage vortex structures in the flow field to "ride the currents", achieving energy consumption approximately one-fifth that of the naive baseline. Through cosine similarity analysis between propulsion direction and flow direction, the physical mechanism is quantitatively verified, showing that the agent achieves an optimal compromise between following the flow and advancing toward the target. 
-Further investigations examine the effects of varying vortex intensity on trajectory morphology and energy consumption, with generalization capability validated through randomized start--goal testing. This study provides theoretical foundations and algorithmic frameworks for intelligent energy-efficient UAV flight in turbulent environments.
+Simulation results show that the trained agent effectively harnesses vortex structures to ride the flow, consuming approximately one-fifth the energy of the naive baseline. Sensitivity analysis over key flow parameters---vortex amplitude, lateral oscillation magnitude, and angular frequency---reveals the strategy's robustness boundaries and failure modes. The reward curve converges after roughly 200,000 steps, and randomized start--goal tests confirm that the agent learns universal flow structures rather than memorizing specific routes. Cosine similarity analysis identifies an optimal angle of approximately 60° between propulsion and flow direction, quantitatively demonstrating that the agent strikes an optimal balance between riding the current and advancing toward the target. This finding bridges active matter theory---where self-propelled particles seek minimum-dissipation paths in non-equilibrium order-parameter fields---with macroscopic UAV soaring, offering theoretical foundations and an algorithmic framework for intelligent energy-efficient flight in turbulent environments.
 
-\engkeywordslist{reinforcement learning; self-propelling agent; energy optimization; double-gyre flow; migration strategy}
+\engkeywordslist{reinforcement learning; self-propelling agent; energy optimization; double-gyre flow; migration strategy; active matter}
 \end{engabstract}
+
